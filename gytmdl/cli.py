@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import traceback
 import inspect
 import json
 import logging
@@ -287,6 +288,8 @@ def main(
         queue_progress = f"Track {queue_index}/{len(download_queue)} from URL {url_index}/{len(urls)}"
         try:
             logger.info(f'({queue_progress}) Downloading "{queue_item["title"]}"')
+            input('test cookies')
+            downloader.test_cookies(cookies_path)
             logger.debug("Getting tags")
             ytmusic_watch_playlist = downloader.get_ytmusic_watch_playlist(
                 queue_item["id"]
@@ -330,6 +333,7 @@ def main(
                 f'({queue_progress}) Failed to download "{queue_item["title"]}"',
                 exc_info=print_exceptions,
             )
+            traceback.print_exc()
         finally:
             if temp_path.exists():
                 logger.debug(f'Cleaning up "{temp_path}"')

@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import typing
+import http.cookiejar
 from pathlib import Path
 
 import requests
@@ -21,6 +22,27 @@ from ytmusicapi import YTMusic
 from .constants import IMAGE_FILE_EXTENSION_MAP, MP4_TAGS_MAP
 from .enums import CoverFormat, DownloadMode
 
+class AuthYTMusic(YTMusic):
+    def __init__(self, cookies_path: str):
+        super().__init__()
+        self.cookies_path = cookies_path
+        self.session = requests.Session()
+        self._load_netscape_cookies()  # Update session with cookies
+
+    def _load_netscape_cookies(self):
+        # Load cookies from a Netscape format file
+        cookie_jar = http.cookiejar.MozillaCookieJar(self.cookies_path)
+        cookie_jar.load()  # Load the cookies into the cookie jar
+
+        # Convert cookies to a format suitable for requests
+        cookies = requests.cookies.RequestsCookieJar()
+        for cookie in cookie_jar:
+            cookies.set(cookie.name, cookie.value, domain=cookie.domain, path=cookie.path)
+
+        self.session.cookies = cookies
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        })
 
 class Downloader:
     def __init__(
@@ -58,13 +80,14 @@ class Downloader:
         self.exclude_tags = exclude_tags
         self.truncate = truncate
         self.silent = silent
+        self.playlist_id = None
         self._set_ytmusic_instance()
         self._set_ytdlp_options()
         self._set_exclude_tags()
         self._set_truncate()
 
     def _set_ytmusic_instance(self):
-        self.ytmusic = YTMusic()
+        self.ytmusic = AuthYTMusic(self.cookies_path)
 
     def _set_ytdlp_options(self):
         self.ytdlp_options = {
@@ -94,15 +117,20 @@ class Downloader:
 
     @functools.lru_cache()
     def _get_ytdlp_info(self, url: str) -> dict:
-        with YoutubeDL(
-            {
-                **self.ytdlp_options,
-                "extract_flat": True,
-                "cookiefile": str(self.cookies_path) if self.cookies_path else None,  # Include cookies
-            }
-        ) as ydl:
-            return ydl.extract_info(url, download=False)
+        ytdlp_options = {
+            **self.ytdlp_options,
+            "extract_flat": True,
+            "cookiefile": str(self.cookies_path) if self.cookies_path else None,
+        }
+        if url == "https://www.youtube.com/playlist?list=None":
+            url = self.playlist_id
+        if self.playlist_id is None:
+            self.playlist_id = url
 
+        print(f"make sure the cookies are for this subdomain => {url}")
+        with YoutubeDL(ytdlp_options) as ydl:
+            return ydl.extract_info(url, download=False)
+    
     def get_download_queue(
         self,
         url: str,
@@ -203,6 +231,8 @@ class Downloader:
         ytmusic_album = self.get_ytmusic_album(
             ytmusic_watch_playlist["tracks"][0]["album"]["id"]
         )
+        print(ytmusic_watch_playlist["tracks"][0]["album"]["id"])
+        print(ytmusic_album)
         tags = {
             "album": ytmusic_album["title"],
             "album_artist": self._get_artist(ytmusic_album["artists"]),
