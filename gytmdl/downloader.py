@@ -98,6 +98,7 @@ class Downloader:
             {
                 **self.ytdlp_options,
                 "extract_flat": True,
+                "cookiefile": str(self.cookies_path) if self.cookies_path else None,  # Include cookies
             }
         ) as ydl:
             return ydl.extract_info(url, download=False)
@@ -285,6 +286,7 @@ class Downloader:
                 "fixup": "never",
                 "format": self.itag,
                 "outtmpl": str(temp_path),
+                "cookiefile": str(self.cookies_path) if self.cookies_path else None,  # Include cookies
             }
         ) as ydl:
             ydl.download("https://music.youtube.com/watch?v=" + video_id)
