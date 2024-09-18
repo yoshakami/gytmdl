@@ -5,6 +5,7 @@ import inspect
 import json
 import logging
 import shutil
+import os
 from enum import Enum
 from pathlib import Path
 
@@ -149,6 +150,8 @@ def load_config_file(
 )
 @click.option(
     "--cover-size",
+    "--picture-size",
+    "-p",
     type=int,
     default=downloader_sig.parameters["cover_size"].default,
     help="Cover size.",
@@ -196,6 +199,15 @@ def load_config_file(
     default=downloader_sig.parameters["truncate"].default,
     help="Maximum length of the file/folder names.",
 )
+@click.option(
+    "--oauth-path",
+    "--oauth",
+    "--json",
+    "-j",
+    type=str,
+    default=downloader_sig.parameters["oauth_path"].default,
+    help="OAuth json for Youtube Data Api V3 (used for channel links)",
+)
 # This option should always be last
 @click.option(
     "--no-config-file",
@@ -204,6 +216,7 @@ def load_config_file(
     callback=load_config_file,
     help="Don't load the config file.",
 )
+
 @click.version_option(__version__)
 @click.help_option("-h", "--help")
 def main(
@@ -229,6 +242,7 @@ def main(
     template_date: str,
     exclude_tags: str,
     truncate: int,
+    oauth_path: str,
     no_config_file: bool,
 ):
     logging.basicConfig(
@@ -243,8 +257,11 @@ def main(
     if download_mode == DownloadMode.ARIA2C and not shutil.which(aria2c_path):
         logger.critical(X_NOT_FOUND_STRING.format("aria2c", aria2c_path))
         return
-    if cookies_path and not cookies_path.exists():
+    if cookies_path and not os.path.exists(cookies_path):
         logger.critical(X_NOT_FOUND_STRING.format("Cookies file", cookies_path))
+        return
+    if oauth_path and not os.path.exists(oauth_path):
+        logger.critical(X_NOT_FOUND_STRING.format("Oauth file", oauth_path))
         return
     if read_urls_as_txt:
         _urls = []
@@ -269,6 +286,7 @@ def main(
         template_date,
         exclude_tags,
         truncate,
+        oauth_path,
     )
     error_count = 0
     download_queue = []

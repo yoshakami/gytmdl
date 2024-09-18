@@ -22,32 +22,6 @@ from ytmusicapi import YTMusic
 from .constants import IMAGE_FILE_EXTENSION_MAP, MP4_TAGS_MAP
 from .enums import CoverFormat, DownloadMode
 
-class AuthYTMusic(YTMusic):
-    def __init__(self, cookies_path: str):
-        self.cookies_path = cookies_path
-        headers = self._load_netscape_cookies()  # Build headers from cookies
-        super().__init__(auth=headers)  # Pass headers to YTMusic as auth
-
-    def _load_netscape_cookies(self):
-        # Load cookies from a Netscape format file
-        cookie_jar = http.cookiejar.MozillaCookieJar(self.cookies_path)
-        cookie_jar.load(ignore_discard=True, ignore_expires=True)
-
-        cookies = {}
-        for cookie in cookie_jar:
-            # Add cookies to a dictionary in the format expected by YTMusic
-            cookies[cookie.name] = cookie.value
-        
-        # Prepare headers required for authenticated requests
-        headers = {
-            'cookie': "; ".join([f"{key}={value}" for key, value in cookies.items()]),
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'X-Goog-AuthUser': '0'  # Optional, adjust based on your Google account profile
-        }
-
-        return headers
-
-
 
 class Downloader:
     def __init__(
@@ -67,6 +41,7 @@ class Downloader:
         template_date: str = "%Y-%m-%dT%H:%M:%SZ",
         exclude_tags: str = None,
         truncate: int = None,
+        oauth_path: str = None,
         silent: bool = False,
     ):
         self.output_path = output_path
@@ -85,6 +60,7 @@ class Downloader:
         self.exclude_tags = exclude_tags
         self.truncate = truncate
         self.silent = silent
+        self.oauth_path = oauth_path
         self.playlist_id = None
         self._set_ytmusic_instance()
         self._set_ytdlp_options()
@@ -92,7 +68,8 @@ class Downloader:
         self._set_truncate()
 
     def _set_ytmusic_instance(self):
-        self.ytmusic = AuthYTMusic(self.cookies_path)
+        self.ytmusic = YTMusic(self.oauth_path)
+        print(self.oauth_path)
 
     def _set_ytdlp_options(self):
         self.ytdlp_options = {
@@ -166,6 +143,7 @@ class Downloader:
         channel_id: str,
     ) -> typing.Generator[dict, None, None]:
         artist = self.ytmusic.get_artist(channel_id)
+        print(artist)
         media_type = inquirer.select(
             message=f'Select which type to download for artist "{artist["name"]}":',
             choices=[
