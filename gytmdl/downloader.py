@@ -26,6 +26,8 @@ from .enums import CoverFormat, DownloadMode
 class Downloader:
     def __init__(
         self,
+        premium: bool,
+        all: bool,
         output_path: Path = Path("./YouTube Music"),
         temp_path: Path = Path("./temp"),
         cookies_path: Path = None,

@@ -102,6 +102,18 @@ def load_config_file(
     is_flag=True,
     help="Print exceptions.",
 )
+@click.option(
+    "--premium",
+    "-p",
+    is_flag=True,
+    help="takes advantage of premium and download in premium format if it exists",
+)
+@click.option(
+    "--all",
+    "-a",
+    is_flag=True,
+    help="choose all instead of giving choices with a channel link",
+)
 # Downloader specific options
 @click.option(
     "--output-path",
@@ -150,8 +162,9 @@ def load_config_file(
 )
 @click.option(
     "--cover-size",
-    "--picture-size",
-    "-p",
+    "--cover-px",
+    "--px",
+    "-x",
     type=int,
     default=downloader_sig.parameters["cover_size"].default,
     help="Cover size.",
@@ -227,6 +240,8 @@ def main(
     config_path: Path,
     log_level: str,
     print_exceptions: bool,
+    premium: bool,
+    all: bool,
     output_path: Path,
     temp_path: Path,
     cookies_path: Path,
@@ -271,6 +286,8 @@ def main(
         urls = _urls
     logger.debug("Starting downloader")
     downloader = Downloader(
+        premium,
+        all,
         output_path,
         temp_path,
         cookies_path,
