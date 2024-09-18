@@ -129,7 +129,9 @@ class Downloader:
 
         print(f"make sure the cookies are for this subdomain => {url}")
         with YoutubeDL(ytdlp_options) as ydl:
-            return ydl.extract_info(url, download=False)
+            data = ydl.extract_info(url, download=False)
+            print(data)
+            return data
     
     def get_download_queue(
         self,
@@ -242,10 +244,13 @@ class Downloader:
             "title": ytmusic_watch_playlist["tracks"][0]["title"],
             "track_total": ytmusic_album["trackCount"],
         }
-        for index, entry in enumerate(
-            self._get_ytdlp_info(
+        extracted_info = self._get_ytdlp_info(
                 f'https://www.youtube.com/playlist?list={ytmusic_album["audioPlaylistId"]}'
-            )["entries"]
+            )
+        entries = extracted_info.get("entries", [])
+        if not entries: # then it's not a playlist!!! it should be a watch link
+            entries = [extracted_info]
+        for index, entry in enumerate(entries
         ):
             if entry["id"] == video_id:
                 if ytmusic_album["tracks"][index]["isExplicit"]:
