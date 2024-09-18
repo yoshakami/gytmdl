@@ -24,25 +24,30 @@ from .enums import CoverFormat, DownloadMode
 
 class AuthYTMusic(YTMusic):
     def __init__(self, cookies_path: str):
-        super().__init__()
         self.cookies_path = cookies_path
-        self.session = requests.Session()
-        self._load_netscape_cookies()  # Update session with cookies
+        headers = self._load_netscape_cookies()  # Build headers from cookies
+        super().__init__(auth=headers)  # Pass headers to YTMusic as auth
 
     def _load_netscape_cookies(self):
         # Load cookies from a Netscape format file
         cookie_jar = http.cookiejar.MozillaCookieJar(self.cookies_path)
-        cookie_jar.load()  # Load the cookies into the cookie jar
+        cookie_jar.load(ignore_discard=True, ignore_expires=True)
 
-        # Convert cookies to a format suitable for requests
-        cookies = requests.cookies.RequestsCookieJar()
+        cookies = {}
         for cookie in cookie_jar:
-            cookies.set(cookie.name, cookie.value, domain=cookie.domain, path=cookie.path)
+            # Add cookies to a dictionary in the format expected by YTMusic
+            cookies[cookie.name] = cookie.value
+        
+        # Prepare headers required for authenticated requests
+        headers = {
+            'cookie': "; ".join([f"{key}={value}" for key, value in cookies.items()]),
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'X-Goog-AuthUser': '0'  # Optional, adjust based on your Google account profile
+        }
 
-        self.session.cookies = cookies
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        })
+        return headers
+
+
 
 class Downloader:
     def __init__(
