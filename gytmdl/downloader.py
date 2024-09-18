@@ -106,7 +106,7 @@ class Downloader:
         }
         if url == "https://www.youtube.com/playlist?list=None":
             url = self.playlist_id
-        if self.playlist_id is None:
+        if self.playlist_id is None and "/browse/" not in url:
             self.playlist_id = url
 
         print(f"make sure the cookies are for this subdomain => {url}")
