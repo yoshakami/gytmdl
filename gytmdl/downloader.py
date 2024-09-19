@@ -47,6 +47,12 @@ class Downloader:
         oauth_path: str = None,
         silent: bool = False,
     ):
+        self.m4a128 = 0
+        self.m4a64 = 0
+        self.m4a = 0
+        self.opus128 = 0
+        self.opus64 = 0
+        self.opus = 0
         self.premium = premium
         self.all = all
         self.output_path = output_path
@@ -104,7 +110,7 @@ class Downloader:
         if self.truncate is not None:
             self.truncate = None if self.truncate < 4 else self.truncate
 
-    @functools.lru_cache()
+
     def _get_ytdlp_info(self, url: str) -> dict:
         ytdlp_options = {
             **self.ytdlp_options,
@@ -113,7 +119,7 @@ class Downloader:
         }
         if url == "https://www.youtube.com/playlist?list=None":
             url = self.playlist_id
-        if self.playlist_id is None and "/browse/" not in url:
+        if "/browse/" not in url:
             self.playlist_id = url
 
         print(f"make sure the cookies are for this subdomain => {url}")
@@ -128,6 +134,8 @@ class Downloader:
         download_index=-1
     ) -> typing.Generator[dict, None, None]:
         artist_match = re.match(YoutubeTabIE._VALID_URL, url)
+        if artist_match and artist_match.group("channel_type") == "channel" and download_index == -2:
+            yield self._get_download_queue_artist(artist_match.group("id"), download_index)
         if artist_match and artist_match.group("channel_type") == "channel":
             yield from self._get_download_queue_artist(artist_match.group("id"), download_index)
         else:
@@ -148,23 +156,12 @@ class Downloader:
 
     def get_number_of_albums_and_singles(
         self,
-        channel_id: str,
+        url: str,
         ):
-        if not self.all:
-            return 1
-        return self._get_download_queue_artist(self, channel_id)
-
-    def _get_download_queue_artist(
-        self,
-        channel_id: str,
-        download_index=-1,
-    ) -> typing.Generator[dict, None, None]:
-        if self.artist is None:
-            artist = self.artist = self.ytmusic.get_artist(channel_id)
-        else:
-            artist = self.artist
+        artist_match = re.match(YoutubeTabIE._VALID_URL, url)
+        artist = self.artist = self.ytmusic.get_artist(artist_match.group("id"))
         # print(artist)
-        if self.all and self.selected == []:
+        if self.all:
             # Get albums if available
             if artist.get("albums", {}).get("results"):
                 albums = artist["albums"]["results"]
@@ -178,8 +175,7 @@ class Downloader:
             elif artist.get("singles", {}).get("browseId") and artist.get("singles", {}).get("params"):
                 singles = self.ytmusic.get_artist_albums(artist["singles"]["browseId"], artist["singles"]["params"])
             self.selected.extend(singles)
-            return len(self.selected)
-        elif self.selected == []:
+        else:
             media_type = inquirer.select(
                 message=f'Select which type to download for artist "{artist["name"]}":',
                 choices=[
@@ -219,10 +215,16 @@ class Downloader:
                 choices=choices,
                 multiselect=True,
             ).execute()
-            return len(self.selected)
-        else:
-            album = self.selected[download_index]
-            yield from self._get_download_queue_url(
+        print(len(self.selected))
+        return len(self.selected)
+
+    def _get_download_queue_artist(
+        self,
+        channel_id: str,
+        download_index=-1,
+    ) -> typing.Generator[dict, None, None]:
+        album = self.selected[download_index]
+        yield from self._get_download_queue_url(
                 "https://music.youtube.com/browse/" + album["browseId"]
             )
 
@@ -280,6 +282,7 @@ class Downloader:
                     tags["rating"] = 0
                 tags["track"] = index + 1
                 break
+            # print(entry["id"], video_id, index)
         if ytmusic_watch_playlist["lyrics"]:
             lyrics = self.ytmusic.get_lyrics(ytmusic_watch_playlist["lyrics"])["lyrics"]
             if lyrics is not None:
@@ -344,34 +347,46 @@ class Downloader:
                     "cookiefile": str(self.cookies_path) if self.cookies_path else None,  # Include cookies
                 }
         if self.premium:
-            options[format] = "141"
+            options["format"] = "141"
             with YoutubeDL(options) as ydl:
                 ydl.download("https://music.youtube.com/watch?v=" + video_id)
             if not os.path.exists(str(temp_path)):
-                options[format] = "774"
+                options["format"] = "774"
                 with YoutubeDL(options) as ydl:
                     ydl.download("https://music.youtube.com/watch?v=" + video_id)
                 if not os.path.exists(str(temp_path)):
-                    options[format] = "140"
+                    options["format"] = "140"
                     with YoutubeDL(options) as ydl:
                         ydl.download("https://music.youtube.com/watch?v=" + video_id)
                     if not os.path.exists(str(temp_path)):
-                        options[format] = "251"
+                        options["format"] = "251"
                         with YoutubeDL(options) as ydl:
                             ydl.download("https://music.youtube.com/watch?v=" + video_id)
                         if not os.path.exists(str(temp_path)):
-                            options[format] = "139"
+                            options["format"] = "139"
                             with YoutubeDL(options) as ydl:
                                 ydl.download("https://music.youtube.com/watch?v=" + video_id)
-                            print("downloading format opus 139 => 64kb/s")
+                            if not os.path.exists(str(temp_path)):
+                                options["format"] = "250"
+                                with YoutubeDL(options) as ydl:
+                                    ydl.download("https://music.youtube.com/watch?v=" + video_id)
+                                print("downloading format opus 250 => 64kb/s")
+                                self.opus64 += 1
+                            else:
+                                print("downloading format m4a 139 => 64kb/s")
+                                self.m4a64 += 1
                         else:
                             print("downloading format opus 251 => 128kb/s")
+                            self.opus128 += 1
                     else:
                         print("downloading format m4a 140 => 128kb/s")
+                        self.m4a128 += 1
                 else:
                     print("downloading format opus 774 => 256kb/s")
+                    self.opus += 1
             else:
                 print("downloading format m4a 141 => 256kb/s")
+                self.m4a += 1
         else:
             with YoutubeDL(options) as ydl:
                 ydl.download("https://music.youtube.com/watch?v=" + video_id)

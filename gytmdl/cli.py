@@ -308,14 +308,15 @@ def main(
     error_count = 0
     download_queue = []
     for url_index, url in enumerate(urls, start=1):
-        download_len = downloader.get_number_of_albums_and_singles()
+        count = downloader.get_number_of_albums_and_singles(url)  # Count items
+        print(count)
         url_progress = f"URL {url_index}/{len(urls)}"
-        for download_index in range(download_len):
+        for download_index in range(count):
             try:
                 logger.info(f'({url_progress}) Checking "{url}"')
                 download_queue = list(downloader.get_download_queue(url, download_index))
-                print(all, premium)
-                input("continue?")
+                # print(all, premium)
+                # input("continue?")
                 for queue_index, queue_item in enumerate(download_queue, start=1):
                     queue_progress = f"Track {queue_index}/{len(download_queue)} from URL {url_index}/{len(urls)}"
                     try:
@@ -376,4 +377,5 @@ def main(
                 )
                 traceback.print_exc()
                 continue
+    print(f"m4a 256kb/s:{downloader.m4a}, opus 256kb/s:{downloader.opus}, m4a 128kb/s:{downloader.m4a128}, opus 128kb/s:{downloader.opus128},  m4a 64kb/s:{downloader.m4a64}, opus 64kb/s:{downloader.opus64}")
     logger.info(f"Done ({error_count} error(s))")
