@@ -67,6 +67,8 @@ class Downloader:
         self.silent = silent
         self.oauth_path = oauth_path
         self.playlist_id = None
+        self.artist = None
+        self.selected = []
         self._set_ytmusic_instance()
         self._set_ytdlp_options()
         self._set_exclude_tags()
@@ -123,10 +125,11 @@ class Downloader:
     def get_download_queue(
         self,
         url: str,
+        download_index=-1
     ) -> typing.Generator[dict, None, None]:
         artist_match = re.match(YoutubeTabIE._VALID_URL, url)
         if artist_match and artist_match.group("channel_type") == "channel":
-            yield from self._get_download_queue_artist(artist_match.group("id"))
+            yield from self._get_download_queue_artist(artist_match.group("id"), download_index)
         else:
             yield from self._get_download_queue_url(url)
 
@@ -143,52 +146,82 @@ class Downloader:
         if "watch" in ytdlp_info["webpage_url_basename"]:
             yield ytdlp_info
 
+    def get_number_of_albums_and_singles(
+        self,
+        channel_id: str,
+        ):
+        if not self.all:
+            return 1
+        return self._get_download_queue_artist(self, channel_id)
+
     def _get_download_queue_artist(
         self,
         channel_id: str,
+        download_index=-1,
     ) -> typing.Generator[dict, None, None]:
-        artist = self.ytmusic.get_artist(channel_id)
+        if self.artist is None:
+            artist = self.artist = self.ytmusic.get_artist(channel_id)
+        else:
+            artist = self.artist
         # print(artist)
-        media_type = inquirer.select(
-            message=f'Select which type to download for artist "{artist["name"]}":',
-            choices=[
-                Choice(
-                    name="Albums",
-                    value="albums",
-                ),
-                Choice(
-                    name="Singles",
-                    value="singles",
-                ),
-            ],
-            validate=lambda result: artist.get(result, {}).get("results"),
-            invalid_message="The artist doesn't have any items of this type",
-        ).execute()
-        artist_albums = (
-            self.ytmusic.get_artist_albums(
-                artist[media_type]["browseId"], artist[media_type]["params"]
+        if self.all and self.selected == []:
+            # Get albums if available
+            if artist.get("albums", {}).get("results"):
+                albums = artist["albums"]["results"]
+            elif artist.get("albums", {}).get("browseId") and artist.get("albums", {}).get("params"):
+                albums = self.ytmusic.get_artist_albums(artist["albums"]["browseId"], artist["albums"]["params"])
+            self.selected.extend(albums)
+
+            # Get singles if available
+            if artist.get("singles", {}).get("results"):
+                singles = artist["singles"]["results"]
+            elif artist.get("singles", {}).get("browseId") and artist.get("singles", {}).get("params"):
+                singles = self.ytmusic.get_artist_albums(artist["singles"]["browseId"], artist["singles"]["params"])
+            self.selected.extend(singles)
+            return len(self.selected)
+        elif self.selected == []:
+            media_type = inquirer.select(
+                message=f'Select which type to download for artist "{artist["name"]}":',
+                choices=[
+                    Choice(
+                        name="Albums",
+                        value="albums",
+                    ),
+                    Choice(
+                        name="Singles",
+                        value="singles",
+                    ),
+                ],
+                validate=lambda result: artist.get(result, {}).get("results"),
+                invalid_message="The artist doesn't have any items of this type",
+            ).execute()
+            artist_albums = (
+                self.ytmusic.get_artist_albums(
+                    artist[media_type]["browseId"], artist[media_type]["params"]
+                )
+                if artist[media_type].get("browseId") and artist[media_type].get("params")
+                else artist[media_type]["results"]
             )
-            if artist[media_type].get("browseId") and artist[media_type].get("params")
-            else artist[media_type]["results"]
-        )
-        choices = [
-            Choice(
-                name=" | ".join(
-                    [
-                        album.get("year", "Unknown"),
-                        album["title"],
-                    ]
-                ),
-                value=album,
-            )
-            for album in artist_albums
-        ]
-        selected = inquirer.select(
-            message="Select which items to download: (Year | Title)",
-            choices=choices,
-            multiselect=True,
-        ).execute()
-        for album in selected:
+            choices = [
+                Choice(
+                    name=" | ".join(
+                        [
+                            album.get("year", "Unknown"),
+                            album["title"],
+                        ]
+                    ),
+                    value=album,
+                )
+                for album in artist_albums
+            ]
+            self.selected = inquirer.select(
+                message="Select which items to download: (Year | Title)",
+                choices=choices,
+                multiselect=True,
+            ).execute()
+            return len(self.selected)
+        else:
+            album = self.selected[download_index]
             yield from self._get_download_queue_url(
                 "https://music.youtube.com/browse/" + album["browseId"]
             )

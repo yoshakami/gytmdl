@@ -308,68 +308,72 @@ def main(
     error_count = 0
     download_queue = []
     for url_index, url in enumerate(urls, start=1):
+        download_len = downloader.get_number_of_albums_and_singles()
         url_progress = f"URL {url_index}/{len(urls)}"
-        try:
-            logger.info(f'({url_progress}) Checking "{url}"')
-            download_queue = list(downloader.get_download_queue(url))
-        except Exception as e:
-            error_count += 1
-            logger.error(
-                f'({url_progress}) Failed to check "{url}"',
-                exc_info=print_exceptions,
-            )
-            traceback.print_exc()
-            continue
-    for queue_index, queue_item in enumerate(download_queue, start=1):
-        queue_progress = f"Track {queue_index}/{len(download_queue)} from URL {url_index}/{len(urls)}"
-        try:
-            logger.info(f'({queue_progress}) Downloading "{queue_item["title"]}"')
-            logger.debug("Getting tags")
-            ytmusic_watch_playlist = downloader.get_ytmusic_watch_playlist(
-                queue_item["id"]
-            )
-            if not ytmusic_watch_playlist:
-                logger.warning(
-                    f"({queue_progress}) Track doesn't have an album or is not available, skipping"
+        for download_index in range(download_len):
+            try:
+                logger.info(f'({url_progress}) Checking "{url}"')
+                download_queue = list(downloader.get_download_queue(url, download_index))
+                print(all, premium)
+                input("continue?")
+                for queue_index, queue_item in enumerate(download_queue, start=1):
+                    queue_progress = f"Track {queue_index}/{len(download_queue)} from URL {url_index}/{len(urls)}"
+                    try:
+                        logger.info(f'({queue_progress}) Downloading "{queue_item["title"]}"')
+                        logger.debug("Getting tags")
+                        ytmusic_watch_playlist = downloader.get_ytmusic_watch_playlist(
+                            queue_item["id"]
+                        )
+                        if not ytmusic_watch_playlist:
+                            logger.warning(
+                                f"({queue_progress}) Track doesn't have an album or is not available, skipping"
+                            )
+                            continue
+                        video_id = ytmusic_watch_playlist["tracks"][0]["videoId"]
+                        tags = downloader.get_tags(ytmusic_watch_playlist)
+                        track_temp_path = downloader.get_track_temp_path(video_id)
+                        remuxed_path = downloader.get_remuxed_path(video_id)
+                        final_path = downloader.get_final_path(tags)
+                        cover_url = downloader.get_cover_url(ytmusic_watch_playlist)
+                        cover_file_extension = downloader.get_cover_file_extension(cover_url)
+                        cover_path = downloader.get_cover_path(final_path, cover_file_extension)
+                        if final_path.exists() and not overwrite:
+                            logger.warning(
+                                f'({queue_progress}) Song already exists at "{final_path}", skipping'
+                            )
+                        else:
+                            logger.debug(f'Downloading to "{track_temp_path}"')
+                            downloader.download(video_id, track_temp_path)
+                            logger.debug(f'Remuxing to "{remuxed_path}"')
+                            downloader.remux(track_temp_path, remuxed_path)
+                            logger.debug("Applying tags")
+                            downloader.apply_tags(remuxed_path, tags, cover_url)
+                            logger.debug(f'Moving to "{final_path}"')
+                            downloader.move_to_output_path(remuxed_path, final_path)
+                        if not save_cover:
+                            pass
+                        elif cover_path.exists() and not overwrite:
+                            logger.debug(f'Cover already exists at "{cover_path}", skipping')
+                        else:
+                            logger.debug(f'Saving cover to "{cover_path}"')
+                            downloader.save_cover(cover_path, cover_url)
+                    except Exception as e:
+                        error_count += 1
+                        logger.error(
+                            f'({queue_progress}) Failed to download "{queue_item["title"]}"',
+                            exc_info=print_exceptions,
+                        )
+                        traceback.print_exc()
+                    finally:
+                        if temp_path.exists():
+                            logger.debug(f'Cleaning up "{temp_path}"')
+                            downloader.cleanup_temp_path()
+            except Exception as e:
+                error_count += 1
+                logger.error(
+                    f'({url_progress}) Failed to check "{url}"',
+                    exc_info=print_exceptions,
                 )
+                traceback.print_exc()
                 continue
-            video_id = ytmusic_watch_playlist["tracks"][0]["videoId"]
-            tags = downloader.get_tags(ytmusic_watch_playlist)
-            track_temp_path = downloader.get_track_temp_path(video_id)
-            remuxed_path = downloader.get_remuxed_path(video_id)
-            final_path = downloader.get_final_path(tags)
-            cover_url = downloader.get_cover_url(ytmusic_watch_playlist)
-            cover_file_extension = downloader.get_cover_file_extension(cover_url)
-            cover_path = downloader.get_cover_path(final_path, cover_file_extension)
-            if final_path.exists() and not overwrite:
-                logger.warning(
-                    f'({queue_progress}) Song already exists at "{final_path}", skipping'
-                )
-            else:
-                logger.debug(f'Downloading to "{track_temp_path}"')
-                downloader.download(video_id, track_temp_path)
-                logger.debug(f'Remuxing to "{remuxed_path}"')
-                downloader.remux(track_temp_path, remuxed_path)
-                logger.debug("Applying tags")
-                downloader.apply_tags(remuxed_path, tags, cover_url)
-                logger.debug(f'Moving to "{final_path}"')
-                downloader.move_to_output_path(remuxed_path, final_path)
-            if not save_cover:
-                pass
-            elif cover_path.exists() and not overwrite:
-                logger.debug(f'Cover already exists at "{cover_path}", skipping')
-            else:
-                logger.debug(f'Saving cover to "{cover_path}"')
-                downloader.save_cover(cover_path, cover_url)
-        except Exception as e:
-            error_count += 1
-            logger.error(
-                f'({queue_progress}) Failed to download "{queue_item["title"]}"',
-                exc_info=print_exceptions,
-            )
-            traceback.print_exc()
-        finally:
-            if temp_path.exists():
-                logger.debug(f'Cleaning up "{temp_path}"')
-                downloader.cleanup_temp_path()
     logger.info(f"Done ({error_count} error(s))")
