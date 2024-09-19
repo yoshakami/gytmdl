@@ -4,6 +4,7 @@ import datetime
 import functools
 import io
 import re
+import os
 import shutil
 import subprocess
 import typing
@@ -46,6 +47,8 @@ class Downloader:
         oauth_path: str = None,
         silent: bool = False,
     ):
+        self.premium = premium
+        self.all = all
         self.output_path = output_path
         self.temp_path = temp_path
         self.cookies_path = cookies_path
@@ -71,7 +74,7 @@ class Downloader:
 
     def _set_ytmusic_instance(self):
         self.ytmusic = YTMusic(self.oauth_path)
-        print(self.oauth_path)
+        # print(self.oauth_path)
 
     def _set_ytdlp_options(self):
         self.ytdlp_options = {
@@ -114,7 +117,7 @@ class Downloader:
         print(f"make sure the cookies are for this subdomain => {url}")
         with YoutubeDL(ytdlp_options) as ydl:
             data = ydl.extract_info(url, download=False)
-            print(data)
+            # print(data)
             return data
     
     def get_download_queue(
@@ -145,7 +148,7 @@ class Downloader:
         channel_id: str,
     ) -> typing.Generator[dict, None, None]:
         artist = self.ytmusic.get_artist(channel_id)
-        print(artist)
+        # print(artist)
         media_type = inquirer.select(
             message=f'Select which type to download for artist "{artist["name"]}":',
             choices=[
@@ -218,8 +221,8 @@ class Downloader:
         ytmusic_album = self.get_ytmusic_album(
             ytmusic_watch_playlist["tracks"][0]["album"]["id"]
         )
-        print(ytmusic_watch_playlist["tracks"][0]["album"]["id"])
-        print(ytmusic_album)
+        # print(ytmusic_watch_playlist["tracks"][0]["album"]["id"])
+        # print(ytmusic_album)
         tags = {
             "album": ytmusic_album["title"],
             "album_artist": self._get_artist(ytmusic_album["artists"]),
@@ -293,23 +296,54 @@ class Downloader:
         return self.output_path.joinpath(*final_path_folder).joinpath(*final_path_file)
 
     def download(self, video_id: str, temp_path: Path):
-        with YoutubeDL(
-            {
-                **self.ytdlp_options,
-                "external_downloader": (
-                    {
-                        "default": self.aria2c_path,
-                    }
-                    if self.download_mode == DownloadMode.ARIA2C
-                    else None
-                ),
-                "fixup": "never",
-                "format": self.itag,
-                "outtmpl": str(temp_path),
-                "cookiefile": str(self.cookies_path) if self.cookies_path else None,  # Include cookies
-            }
-        ) as ydl:
-            ydl.download("https://music.youtube.com/watch?v=" + video_id)
+        options = {
+                    **self.ytdlp_options,
+                    "external_downloader": (
+                        {
+                            "default": self.aria2c_path,
+                        }
+                        if self.download_mode == DownloadMode.ARIA2C
+                        else None
+                    ),
+                    "fixup": "never",
+                    "format": self.itag,
+                    "outtmpl": str(temp_path),
+                    "cookiefile": str(self.cookies_path) if self.cookies_path else None,  # Include cookies
+                }
+        if self.premium:
+            options[format] = "141"
+            with YoutubeDL(options) as ydl:
+                ydl.download("https://music.youtube.com/watch?v=" + video_id)
+            if not os.path.exists(str(temp_path)):
+                options[format] = "774"
+                with YoutubeDL(options) as ydl:
+                    ydl.download("https://music.youtube.com/watch?v=" + video_id)
+                if not os.path.exists(str(temp_path)):
+                    options[format] = "140"
+                    with YoutubeDL(options) as ydl:
+                        ydl.download("https://music.youtube.com/watch?v=" + video_id)
+                    if not os.path.exists(str(temp_path)):
+                        options[format] = "251"
+                        with YoutubeDL(options) as ydl:
+                            ydl.download("https://music.youtube.com/watch?v=" + video_id)
+                        if not os.path.exists(str(temp_path)):
+                            options[format] = "139"
+                            with YoutubeDL(options) as ydl:
+                                ydl.download("https://music.youtube.com/watch?v=" + video_id)
+                            print("downloading format opus 139 => 64kb/s")
+                        else:
+                            print("downloading format opus 251 => 128kb/s")
+                    else:
+                        print("downloading format m4a 140 => 128kb/s")
+                else:
+                    print("downloading format opus 774 => 256kb/s")
+            else:
+                print("downloading format m4a 141 => 256kb/s")
+        else:
+            with YoutubeDL(options) as ydl:
+                ydl.download("https://music.youtube.com/watch?v=" + video_id)
+            if not os.path.exists(str(temp_path)):
+                print("specified itag not available")
 
     def remux(self, temp_path: Path, remuxed_path: Path):
         command = [
