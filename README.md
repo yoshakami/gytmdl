@@ -1,9 +1,9 @@
 # Yosh's Note
-my fork allows users to download premium musics, and select more than 99 albums and singles by spamming tab to multiselect (-a doesn't work)
-if you provide a channel link and want to download premium albums, you'll need to add `-j oauth.json` as a command line parameter (in addition to `-c C:/Netscape_cookies_file.txt`)
+my fork allows users to download premium musics, and select more than 99 albums and singles by spamming tab to multiselect (-a doesn't work) <br>
+if you provide a channel link and want to download premium albums, you'll need to add `-j oauth.json` as a command line parameter (in addition to `-c C:/Netscape_cookies_file.txt`) <br>
 in order to generate the json file, you need to run this command in cli (and login with your google account with a yt music premium subscription) ```ytmusicapi oauth```
-
-here's the options I added:
+<br>
+here's the options I added:<br>
 
 | Command line argument / Config file key   | Description                                                                  | Default value                |
 | ----------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------- |
