@@ -1,3 +1,23 @@
+# Yosh's Note
+my fork allows users to download premium musics, and select more than 99 albums and singles by spamming tab to multiselect (-a doesn't work)
+if you provide a channel link and want to download premium albums, you'll need to add `-j oauth.json` as a command line parameter (in addition to `-c C:/Netscape_cookies_file.txt`)
+in order to generate the json file, you need to run this command in cli (and login with your google account with a yt music premium subscription) ```ytmusicapi oauth```
+
+here's the options I added:
+
+| Command line argument / Config file key   | Description                                                                  | Default value                |
+| ----------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------- |
+| `--premium`, `-p`                         | takes advantage of premium and download in premium format if it exists       | `false`                      |
+| `--all`, `-a`                             | [doesn't work] choose all instead of choices with a channel                  | `false`                      |
+| `--oauth`, `--json`, `-j`                 | OAuth json for Youtube Data Api V3 (used for channel links)                  | `null`                       |
+| `--cover-size`, `--cover-px`, `--px`, `-x`| Cover size.                                                                  | `1200`                       |
+
+
+## how to install yosh's version:
+download the source code of this fork, then open a terminal in the same directory as requirements.txt, and pyproject.toml. run the command below and you're good to go ```pip install ./```
+read glomatico's text for usage.
+
+everything below is from Glomatico.
 # Glomatico's YouTube Music Downloader
 A Python CLI app for downloading YouTube Music songs with tags from YouTube Music.
 

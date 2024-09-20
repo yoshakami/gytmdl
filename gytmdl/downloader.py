@@ -169,6 +169,7 @@ class Downloader:
                 albums = artist["albums"]["results"]
             elif artist.get("albums", {}).get("browseId") and artist.get("albums", {}).get("params"):
                 albums = self.ytmusic.get_artist_albums(artist["albums"]["browseId"], artist["albums"]["params"], None)
+                print(f"albums!! {len(albums)}")
             self.selected.extend(albums)
 
             # Get singles if available
@@ -176,6 +177,7 @@ class Downloader:
                 singles = artist["singles"]["results"]
             elif artist.get("singles", {}).get("browseId") and artist.get("singles", {}).get("params"):
                 singles = self.ytmusic.get_artist_albums(artist["singles"]["browseId"], artist["singles"]["params"], None)
+                print(f"singles!!! {len(singles)}")
             self.selected.extend(singles)
         else:
             media_type = inquirer.select(
