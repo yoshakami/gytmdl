@@ -157,8 +157,10 @@ class Downloader:
     def get_number_of_albums_and_singles(
         self,
         url: str,
-        ):
+        ) -> int:
         artist_match = re.match(YoutubeTabIE._VALID_URL, url)
+        if not(artist_match and artist_match.group("channel_type") == "channel"):
+            return 1
         artist = self.artist = self.ytmusic.get_artist(artist_match.group("id"))
         # print(artist)
         if self.all:
