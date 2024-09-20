@@ -2,7 +2,9 @@
 my fork allows users to download premium musics, and select more than 99 albums and singles by spamming tab to multiselect (-a doesn't work) <br>
 if you provide a channel link and want to download premium albums, you'll need to add `-j oauth.json` as a command line parameter (in addition to `-c C:/Netscape_cookies_file.txt`) <br>
 in order to generate the json file, you need to run this command in cli (and login with your google account with a yt music premium subscription) =>
-```ytmusicapi oauth```
+```
+ytmusicapi oauth
+```
 <br>
 here's the options I added:<br>
 
@@ -15,7 +17,10 @@ here's the options I added:<br>
 
 
 ## how to install yosh's version:
-download the source code of this fork, then open a terminal in the same directory as requirements.txt, and pyproject.toml. run the command below and you're good to go => ```pip install ./``` <br>
+download the source code of this fork, then open a terminal in the same directory as requirements.txt, and pyproject.toml. run the command below and you're good to go => 
+```
+pip install ./
+```
 read glomatico's text for usage.
 
 everything below is from Glomatico.
