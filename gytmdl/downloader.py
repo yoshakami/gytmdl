@@ -168,14 +168,14 @@ class Downloader:
             if artist.get("albums", {}).get("results"):
                 albums = artist["albums"]["results"]
             elif artist.get("albums", {}).get("browseId") and artist.get("albums", {}).get("params"):
-                albums = self.ytmusic.get_artist_albums(artist["albums"]["browseId"], artist["albums"]["params"])
+                albums = self.ytmusic.get_artist_albums(artist["albums"]["browseId"], artist["albums"]["params"], None)
             self.selected.extend(albums)
 
             # Get singles if available
             if artist.get("singles", {}).get("results"):
                 singles = artist["singles"]["results"]
             elif artist.get("singles", {}).get("browseId") and artist.get("singles", {}).get("params"):
-                singles = self.ytmusic.get_artist_albums(artist["singles"]["browseId"], artist["singles"]["params"])
+                singles = self.ytmusic.get_artist_albums(artist["singles"]["browseId"], artist["singles"]["params"], None)
             self.selected.extend(singles)
         else:
             media_type = inquirer.select(
@@ -195,7 +195,7 @@ class Downloader:
             ).execute()
             artist_albums = (
                 self.ytmusic.get_artist_albums(
-                    artist[media_type]["browseId"], artist[media_type]["params"]
+                    artist[media_type]["browseId"], artist[media_type]["params"], None
                 )
                 if artist[media_type].get("browseId") and artist[media_type].get("params")
                 else artist[media_type]["results"]
