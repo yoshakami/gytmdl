@@ -15,7 +15,7 @@ here's the options I added:<br>
 
 
 ## how to install yosh's version:
-download the source code of this fork, then open a terminal in the same directory as requirements.txt, and pyproject.toml. run the command below and you're good to go ```pip install ./```
+download the source code of this fork, then open a terminal in the same directory as requirements.txt, and pyproject.toml. run the command below and you're good to go => ```pip install ./``` <br>
 read glomatico's text for usage.
 
 everything below is from Glomatico.
